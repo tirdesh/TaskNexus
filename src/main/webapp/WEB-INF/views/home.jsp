@@ -1,5 +1,6 @@
 <%@ page language="java" contentType="text/html; charset=ISO-8859-1"
     pageEncoding="ISO-8859-1"%>
+<%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
 <jsp:include page="/WEB-INF/views/layout/header.jsp"></jsp:include>
 
     <!-- Content Header (Page header) -->
@@ -7,7 +8,9 @@
       <div class="container-fluid">
         <div class="row mb-2">
           <div class="col-sm-6">
-            <h1 class="m-0 text-dark">Dashboard</h1>
+            <h1 class="m-0 text-dark">
+              <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
+            </h1>
           </div>
         </div>
       </div>
@@ -17,74 +20,163 @@
     <!-- Main content -->
     <section class="content">
       <div class="container-fluid">
-        <!-- Small boxes (Stat box) -->
-        <div class="row">
-          <div class="col-lg-3 col-6">
-            <!-- small box -->
-            <div class="small-box bg-info">
-              <div class="inner">
-                <h3 id="projectCount">0</h3>
-                <p>Projects</p>
+        <!-- Statistics Cards -->
+        <div class="row" id="dashboardCards">
+          <!-- Projects Card -->
+          <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
+            <div class="info-box shadow-lg">
+              <span class="info-box-icon bg-info elevation-2">
+                <i class="fas fa-project-diagram"></i>
+              </span>
+              <div class="info-box-content">
+                <span class="info-box-text">Total Projects</span>
+                <span class="info-box-number">
+                  <span id="projectCount" class="count-number">0</span>
+                </span>
+                <div class="progress">
+                  <div class="progress-bar bg-info" style="width: 100%"></div>
               </div>
-              <div class="icon">
-                <i class="fas fa-folder"></i>
+                <span class="progress-description">
+                  <a href="${pageContext.request.contextPath}/viewProject" class="text-info">
+                    View all projects <i class="fas fa-arrow-right ml-1"></i>
+                  </a>
+                </span>
               </div>
-              <a href="${pageContext.request.contextPath}/viewProject" class="small-box-footer">
-                More info <i class="fas fa-arrow-circle-right"></i>
-              </a>
             </div>
           </div>
-          <!-- ./col -->
-          <div class="col-lg-3 col-6">
-            <!-- small box -->
-            <div class="small-box bg-success">
-              <div class="inner">
-                <h3 id="taskCount">0</h3>
-                <p>Tasks</p>
-              </div>
-              <div class="icon">
+
+          <!-- Tasks Card -->
+          <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
+            <div class="info-box shadow-lg">
+              <span class="info-box-icon bg-success elevation-2">
                 <i class="fas fa-tasks"></i>
+              </span>
+              <div class="info-box-content">
+                <span class="info-box-text">Total Tasks</span>
+                <span class="info-box-number">
+                  <span id="taskCount" class="count-number">0</span>
+                </span>
+                <div class="progress">
+                  <div class="progress-bar bg-success" style="width: 100%"></div>
+                </div>
+                <span class="progress-description">
+                  <a href="${pageContext.request.contextPath}/viewTask" class="text-success">
+                    View all tasks <i class="fas fa-arrow-right ml-1"></i>
+                  </a>
+                </span>
               </div>
-              <a href="${pageContext.request.contextPath}/viewTask" class="small-box-footer">
-                More info <i class="fas fa-arrow-circle-right"></i>
-              </a>
             </div>
           </div>
-          <!-- ./col -->
-          <div class="col-lg-3 col-6">
-            <!-- small box -->
-            <div class="small-box bg-warning">
-              <div class="inner">
-                <h3 id="userCount">0</h3>
-                <p>Users</p>
-              </div>
-              <div class="icon">
+
+          <!-- Users Card (Admin Only) -->
+          <sec:authorize access="hasAuthority('ROLE_ADMIN')">
+          <div class="col-lg-3 col-md-6 col-sm-6 mb-4" id="userCard">
+            <div class="info-box shadow-lg">
+              <span class="info-box-icon bg-warning elevation-2">
                 <i class="fas fa-users"></i>
+              </span>
+              <div class="info-box-content">
+                <span class="info-box-text">Total Users</span>
+                <span class="info-box-number">
+                  <span id="userCount" class="count-number">0</span>
+                </span>
+                <div class="progress">
+                  <div class="progress-bar bg-warning" style="width: 100%"></div>
+                </div>
+                <span class="progress-description">
+                  <a href="${pageContext.request.contextPath}/viewUser" class="text-warning">
+                    Manage users <i class="fas fa-arrow-right ml-1"></i>
+                  </a>
+                </span>
               </div>
-              <a href="${pageContext.request.contextPath}/viewUser" class="small-box-footer">
-                More info <i class="fas fa-arrow-circle-right"></i>
-              </a>
             </div>
           </div>
-          <!-- ./col -->
-          <div class="col-lg-3 col-6">
-            <!-- small box -->
-            <div class="small-box bg-danger">
-              <div class="inner">
-                <h3 id="activeTaskCount">0</h3>
-                <p>Active Tasks</p>
-              </div>
-              <div class="icon">
+          </sec:authorize>
+
+          <!-- Active Tasks Card -->
+          <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
+            <div class="info-box shadow-lg">
+              <span class="info-box-icon bg-danger elevation-2">
                 <i class="fas fa-check-circle"></i>
+              </span>
+              <div class="info-box-content">
+                <span class="info-box-text">Active Tasks</span>
+                <span class="info-box-number">
+                  <span id="activeTaskCount" class="count-number">0</span>
+                </span>
+                <div class="progress">
+                  <div class="progress-bar bg-danger" style="width: 100%"></div>
+                </div>
+                <span class="progress-description">
+                  <a href="${pageContext.request.contextPath}/viewTask?active=true" class="text-danger">
+                    View active tasks <i class="fas fa-arrow-right ml-1"></i>
+                  </a>
+                </span>
               </div>
-              <a href="${pageContext.request.contextPath}/viewTask" class="small-box-footer">
-                More info <i class="fas fa-arrow-circle-right"></i>
-              </a>
             </div>
           </div>
-          <!-- ./col -->
+
+          <!-- My Tasks Card (Non-Admin) -->
+          <sec:authorize access="!hasAuthority('ROLE_ADMIN')">
+          <div class="col-lg-3 col-md-6 col-sm-6 mb-4" id="myTasksCard">
+            <div class="info-box shadow-lg">
+              <span class="info-box-icon bg-primary elevation-2">
+                <i class="fas fa-user-check"></i>
+              </span>
+              <div class="info-box-content">
+                <span class="info-box-text">My Tasks</span>
+                <span class="info-box-number">
+                  <span id="myTaskCount" class="count-number">0</span>
+                </span>
+                <div class="progress">
+                  <div class="progress-bar bg-primary" style="width: 100%"></div>
+                </div>
+                <span class="progress-description">
+                  <a href="${pageContext.request.contextPath}/myTasks" class="text-primary">
+                    View my tasks <i class="fas fa-arrow-right ml-1"></i>
+                  </a>
+                </span>
+              </div>
+            </div>
+          </div>
+          </sec:authorize>
         </div>
         <!-- /.row -->
+
+        <!-- Quick Actions Section (Admin Only) -->
+        <sec:authorize access="hasAuthority('ROLE_ADMIN')">
+        <div class="row">
+          <div class="col-12">
+            <div class="card card-primary card-outline">
+              <div class="card-header">
+                <h3 class="card-title">
+                  <i class="fas fa-bolt mr-2"></i>Quick Actions
+                </h3>
+              </div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-4 col-sm-6 mb-3">
+                    <a href="${pageContext.request.contextPath}/addProject" class="btn btn-block btn-info btn-lg">
+                      <i class="fas fa-plus-circle mr-2"></i>Add Project
+                    </a>
+                  </div>
+                  <div class="col-md-4 col-sm-6 mb-3">
+                    <a href="${pageContext.request.contextPath}/addTask?returnTo=viewTask" class="btn btn-block btn-success btn-lg">
+                      <i class="fas fa-plus-circle mr-2"></i>Add Task
+                    </a>
+                  </div>
+                  <div class="col-md-4 col-sm-6 mb-3">
+                    <a href="${pageContext.request.contextPath}/addUser" class="btn btn-block btn-warning btn-lg">
+                      <i class="fas fa-user-plus mr-2"></i>Add User
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- /.row -->
+        </sec:authorize>
       </div><!-- /.container-fluid -->
     </section>
     <!-- /.content -->
@@ -98,55 +190,55 @@ $(document).ready(function() {
 });
 
 function loadDashboardStats() {
-    // Load project count
     $.ajax({
-        url: '${pageContext.request.contextPath}/allProject',
-        type: 'POST',
+        url: '${pageContext.request.contextPath}/dashboard/stats',
+        type: 'GET',
+        dataType: 'json',
         success: function(response) {
-            if (response.status === '200' && response.data) {
-                $('#projectCount').text(response.data.length);
+            if (response) {
+                // Animate numbers
+                animateValue('projectCount', 0, response.totalProjects || 0, 1000);
+                animateValue('taskCount', 0, response.totalTasks || 0, 1000);
+                animateValue('userCount', 0, response.totalUsers || 0, 1000);
+                animateValue('activeTaskCount', 0, response.activeTasks || 0, 1000);
+                animateValue('myTaskCount', 0, response.myTasks || 0, 1000);
             }
         },
         error: function() {
-            $('#projectCount').text('0');
-        }
-    });
-
-    // Load task count
-    $.ajax({
-        url: '${pageContext.request.contextPath}/allTask',
-        type: 'POST',
-        success: function(response) {
-            if (response.status === '200' && response.data) {
-                var totalTasks = response.data.length;
-                var activeTasks = response.data.filter(function(task) {
-                    if (!task.taskStatus) return false;
-                    var status = task.taskStatus.toString().toUpperCase();
-                    return status === 'IN_PROGRESS' || status === 'TODO' || status === 'BLOCKED';
-                }).length;
-                $('#taskCount').text(totalTasks);
-                $('#activeTaskCount').text(activeTasks);
-            }
-        },
-        error: function() {
-            $('#taskCount').text('0');
-            $('#activeTaskCount').text('0');
-        }
-    });
-
-    // Load user count
-    $.ajax({
-        url: '${pageContext.request.contextPath}/list',
-        type: 'POST',
-        success: function(response) {
-            if (response.status === '200' && response.data) {
-                $('#userCount').text(response.data.length);
-            }
-        },
-        error: function() {
-            $('#userCount').text('0');
+            $('#projectCount').text('Error');
+            $('#taskCount').text('Error');
+            $('#userCount').text('Error');
+            $('#activeTaskCount').text('Error');
+            $('#myTaskCount').text('Error');
         }
     });
 }
-</script>
 
+// Animate number counting
+function animateValue(id, start, end, duration) {
+    var obj = document.getElementById(id);
+    if (!obj) return;
+    
+    var range = end - start;
+    var minTimer = 50;
+    var stepTime = Math.abs(Math.floor(duration / range));
+    stepTime = Math.max(stepTime, minTimer);
+    
+    var startTime = new Date().getTime();
+    var endTime = startTime + duration;
+    var timer;
+    
+    function run() {
+        var now = new Date().getTime();
+        var remaining = Math.max((endTime - now) / duration, 0);
+        var value = Math.round(end - (remaining * range));
+        obj.textContent = value;
+        if (value == end) {
+            clearInterval(timer);
+        }
+    }
+    
+    timer = setInterval(run, stepTime);
+    run();
+}
+</script>

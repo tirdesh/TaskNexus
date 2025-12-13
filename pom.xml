@@ -9,11 +9,11 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.jsprest</groupId>
-	<artifactId>SpringBootRestWithJsp</artifactId>
+	<artifactId>TaskNexus</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>war</packaging>
-	<name>SpringBootRestWithJsp</name>
-	<description>Spring Boot Rest With Jsp</description>
+	<name>TaskNexus</name>
+	<description>TaskNexus - A comprehensive project and task management application</description>
 	<properties>
 		<java.version>17</java.version>
 		<hibernate.version>6.4.0.Final</hibernate.version>
@@ -57,12 +57,14 @@
 			<artifactId>spring-security-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-		<!-- Temporarily disabled to get app working first
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
-		-->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-taglibs</artifactId>
+        </dependency>
 		<!-- BCrypt for password hashing -->
 		<dependency>
 			<groupId>org.springframework.security</groupId>

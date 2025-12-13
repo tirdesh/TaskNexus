@@ -1,10 +1,24 @@
 <jsp:include page="/WEB-INF/views/layout/header.jsp"></jsp:include>
 
+    <!-- Content Header (Page header) -->
+    <div class="content-header">
+      <div class="container-fluid">
+        <div class="row mb-2">
+          <div class="col-sm-6">
+            <h1 class="m-0 text-dark">
+              <i class="fas fa-project-diagram mr-2"></i><span id="pageTitle">Add Project</span>
+            </h1>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- /.content-header -->
+
     <!-- Main content -->
     <section class="content">
        <div class="container-fluid">
-        <div class="row">
-        <div class="col-md-12">
+        <div class="row justify-content-center">
+        <div class="col-md-10 col-lg-8">
             <!-- general form elements -->
             <div class="card card-primary">
               <div class="card-header">
@@ -69,20 +83,25 @@
 var users = [];
 
 $(document).ready(function() {
-    loadUsers();
-    
-    // Check if editing existing project
     var urlParams = new URLSearchParams(window.location.search);
     var projectId = urlParams.get('projectId');
+
+    // Ensure users are loaded before trying to set project manager/team members
     if (projectId) {
-        loadProjectForEdit(projectId);
+        loadUsers(function() {
+            loadProjectForEdit(projectId);
+        });
+    } else {
+        loadUsers();
     }
 });
 
-function loadUsers() {
+function loadUsers(callback) {
     $.ajax({
         url: '${pageContext.request.contextPath}/list',
-        type: 'POST',
+        type: 'GET',
+        dataType: 'json',
+        data: { page: 1, size: 1000 }, // Get all users (large size to get all)
         success: function(response) {
             if (response.status === '200' && response.data) {
                 users = response.data;
@@ -95,9 +114,27 @@ function loadUsers() {
                 memberSelect.empty();
                 
                 $.each(users, function(index, user) {
-                    managerSelect.append('<option value="' + user.user_id + '">' + user.user_name + ' (' + user.email + ')</option>');
-                    memberSelect.append('<option value="' + user.user_id + '">' + user.user_name + ' (' + user.email + ')</option>');
+                    var isAdmin = false;
+                    if (user.role && Array.isArray(user.role)) {
+                        isAdmin = user.role.some(function(role) {
+                            return role && role.name === 'ROLE_ADMIN';
+                        });
+                    }
+                    if (!isAdmin) {
+                        managerSelect.append('<option value="' + user.user_id + '">' + user.user_name + '</option>');
+                        memberSelect.append('<option value="' + user.user_id + '">' + user.user_name + '</option>');
+                    }
                 });
+                if (typeof callback === 'function') {
+                    callback();
+                }
+            }
+        },
+        error: function(xhr) {
+            console.error('Error loading users:', xhr);
+            showError('Error loading users: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Unknown error'));
+            if (typeof callback === 'function') {
+                callback();
             }
         }
     });
@@ -106,53 +143,78 @@ function loadUsers() {
 function loadProjectForEdit(projectId) {
     $.ajax({
         url: '${pageContext.request.contextPath}/project/' + projectId,
-        type: 'POST',
+        type: 'GET',
+        dataType: 'json',
         success: function(response) {
             if (response.status === '200' && response.data) {
                 var project = response.data;
                 
-                // Populate form fields
                 $('#projectId').val(project.projectId);
                 $('#name').val(project.name || '');
                 $('#description').val(project.description || '');
                 
                 if (project.projectStatus) {
-                    $('#projectStatus').val(project.projectStatus);
+                    var statusValue = typeof project.projectStatus === 'string' 
+                        ? project.projectStatus 
+                        : (project.projectStatus.name || project.projectStatus);
+                    $('#projectStatus').val(statusValue);
                 }
                 
-                // Set project manager
                 if (project.projectManager && project.projectManager.user_id) {
                     $('#projectManager').val(project.projectManager.user_id);
                 }
                 
-                // Load team members after users are loaded
-                setTimeout(function() {
-                    if (project.teamMembers && project.teamMembers.length > 0) {
-                        var memberIds = project.teamMembers.map(function(member) {
-                            return member.user_id.toString();
-                        });
-                        $('#teamMembers').val(memberIds);
-                    }
-                }, 500);
+                if (project.teamMembers && project.teamMembers.length > 0) {
+                    var memberIds = project.teamMembers.map(function(member) {
+                        return member.user_id.toString();
+                    });
+                    $('#teamMembers').val(memberIds);
+                }
                 
-                // Update form title
                 $('#formTitle').text('Edit Project');
+                $('#pageTitle').text('Edit Project');
             }
         },
         error: function(xhr) {
-            alert('Error loading project: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Unknown error'));
+            console.error('Error loading project:', xhr);
+            showError('Error loading project: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Unknown error'));
         }
     });
 }
 
 function submit() {
+    // Client-side validation
+    var name = $('#name').val().trim();
+    if (!name) {
+        showError('Project name is required');
+        $('#name').focus();
+        return;
+    }
+    if (name.length < 3) {
+        showError('Project name must be at least 3 characters long');
+        $('#name').focus();
+        return;
+    }
+    if (name.length > 100) {
+        showError('Project name must not exceed 100 characters');
+        $('#name').focus();
+        return;
+    }
+    
+    var description = $('#description').val();
+    if (description && description.length > 5000) {
+        showError('Description must not exceed 5000 characters');
+        $('#description').focus();
+        return;
+    }
+    
     var managerId = $('#projectManager').val();
     var selectedMembers = $('#teamMembers').val() || [];
     
     var projectData = {
         projectId: $('#projectId').val(),
-        name: $('#name').val(),
-        description: $('#description').val(),
+        name: name,
+        description: description || '',
         projectStatus: $('#projectStatus').val()
     };
     
@@ -160,33 +222,66 @@ function submit() {
         projectData.projectManager = { user_id: parseInt(managerId) };
     }
     
-    // Note: Team members need to be added separately via API after project creation
-    // as the saveProject endpoint doesn't handle nested collections well
+    var httpMethod = projectData.projectId ? 'PATCH' : 'POST';
+    
+    // Get CSRF token from meta tags
+    var csrfToken = $('meta[name="_csrf"]').attr('content');
+    var csrfHeader = $('meta[name="_csrf_header"]').attr('content');
     
     $.ajax({
         url: '${pageContext.request.contextPath}/saveProject',
-        type: 'POST',
+        type: httpMethod,
         contentType: 'application/json',
         data: JSON.stringify(projectData),
+        beforeSend: function(xhr) {
+            if (csrfToken && csrfHeader) {
+                xhr.setRequestHeader(csrfHeader, csrfToken);
+            } else if (csrfToken) {
+                xhr.setRequestHeader("X-CSRF-TOKEN", csrfToken);
+            }
+        },
         success: function(response) {
             if (response.status === '200') {
                 // If we have a project ID and team members, add them
                 var projectId = response.data && response.data.projectId ? response.data.projectId : $('#projectId').val();
                 if (projectId && selectedMembers.length > 0) {
                     addTeamMembers(projectId, selectedMembers, function() {
-                        alert(response.message);
+                        showSuccess(response.message);
+                        setTimeout(function() {
                         window.location.href = '${pageContext.request.contextPath}/viewProject';
+                        }, 1500);
                     });
                 } else {
-                    alert(response.message);
+                    showSuccess(response.message);
+                    setTimeout(function() {
                     window.location.href = '${pageContext.request.contextPath}/viewProject';
+                    }, 1500);
                 }
             } else {
-                alert(response.message || 'Error saving project');
+                showError(response.message || 'Error saving project');
             }
         },
         error: function(xhr) {
-            alert('Error: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Unknown error'));
+            var errorMsg = 'Error saving project';
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                errorMsg = xhr.responseJSON.message;
+                // Parse validation error messages
+                if (errorMsg.includes('ConstraintViolation') || errorMsg.includes('Validation failed')) {
+                    // Extract user-friendly message
+                    if (errorMsg.includes('Project name is required')) {
+                        errorMsg = 'Project name is required';
+                    } else if (errorMsg.includes('must be between')) {
+                        errorMsg = 'Project name must be between 3 and 100 characters';
+                    } else if (errorMsg.includes('must not exceed')) {
+                        errorMsg = 'Description must not exceed 5000 characters';
+                    }
+                }
+            } else if (xhr.status === 400) {
+                errorMsg = 'Invalid input. Please check your data and try again.';
+            } else if (xhr.status === 403 && xhr.responseJSON && xhr.responseJSON.message && xhr.responseJSON.message.includes('CSRF')) {
+                errorMsg = 'CSRF token error. Please refresh the page and try again.';
+            }
+            showError(errorMsg);
         }
     });
 }
@@ -200,11 +295,22 @@ function addTeamMembers(projectId, memberIds, callback) {
         return;
     }
     
+    // Get CSRF token from meta tags
+    var csrfToken = $('meta[name="_csrf"]').attr('content');
+    var csrfHeader = $('meta[name="_csrf_header"]').attr('content');
+    
     $.each(memberIds, function(index, userId) {
         $.ajax({
             url: '${pageContext.request.contextPath}/project/' + projectId + '/addTeamMember',
-            type: 'POST',
+            type: 'PATCH',
             data: { userId: userId },
+            beforeSend: function(xhr) {
+                if (csrfToken && csrfHeader) {
+                    xhr.setRequestHeader(csrfHeader, csrfToken);
+                } else if (csrfToken) {
+                    xhr.setRequestHeader("X-CSRF-TOKEN", csrfToken);
+                }
+            },
             success: function(response) {
                 completed++;
                 if (completed === total) {

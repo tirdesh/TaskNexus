@@ -1,120 +1,57 @@
 package com.jsprest.controller;
 
-import com.jsprest.entity.Admin;
-import com.jsprest.dao.AdminDao;
-import com.jsprest.factory.MapFactory;
+import com.jsprest.dao.ProjectDao;
+import com.jsprest.dao.TaskDao;
+import com.jsprest.entity.Users;
+import com.jsprest.service.UsersService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
-import jakarta.servlet.http.HttpSession;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Controller
+@RequestMapping("/admin")
+@PreAuthorize("hasRole('ROLE_ADMIN')")
 public class AdminController {
 
     @Autowired
-    private AdminDao adminDao;
+    UsersService usersService;
 
     @Autowired
-    private BCryptPasswordEncoder passwordEncoder;
+    private ProjectDao projectDao;
 
     @Autowired
-    private MapFactory mapFactory;
+    private TaskDao taskDao;
 
-    @GetMapping("/")
-    public String root() {
-        return "redirect:/loginPage";
-    }
-
-    @GetMapping("/loginPage")
-    public String loginPage(
-            @RequestParam(value = "error", required = false) String error,
-            @RequestParam(value = "logout", required = false) String logout,
-            Model model) {
-        
-        if (error != null) {
-            model.addAttribute("error", "Invalid email or password. Please try again.");
-        }
-        
-        if (logout != null) {
-            model.addAttribute("message", "You have been logged out successfully.");
-        }
-        
-        return "login";
-    }
-
-    @PostMapping("/adminLogin")
+    @RequestMapping(value = "/listUsers", method = RequestMethod.GET)
     @ResponseBody
-    public Map<String, Object> adminLogin(
-            @RequestParam String email,
-            @RequestParam String password,
-            HttpSession session) {
-        Map<String, Object> map = mapFactory.createResponseMap();
-
-        Admin admin = adminDao.findByEmail(email);
-        if (admin != null) {
-            // Check password using BCrypt
-            if (admin.getPassword() != null) {
-                boolean passwordMatches = false;
-                // If password is BCrypt hashed, verify it
-                if (admin.getPassword().startsWith("$2a$") || admin.getPassword().startsWith("$2b$") || admin.getPassword().startsWith("$2y$")) {
-                    passwordMatches = passwordEncoder.matches(password, admin.getPassword());
-                } else {
-                    // Plain text password (fallback for development)
-                    passwordMatches = admin.getPassword().equals(password);
-                }
-                
-                if (passwordMatches) {
-                    session.setAttribute("adminId", admin.getId());
-                    session.setAttribute("adminName", admin.getName());
-                    session.setAttribute("adminEmail", admin.getEmail());
-                    session.setAttribute("isAdmin", true);
-                    
-                    map.put("status", "200");
-                    map.put("message", "Login successful");
-                    map.put("data", admin);
-                } else {
-                    map.put("status", "401");
-                    map.put("message", "Invalid password");
-                }
-            } else {
-                map.put("status", "401");
-                map.put("message", "Admin password not set");
-            }
+    public Map<String, Object> getAll() {
+        Map<String, Object> map = new HashMap<>();
+        List<Users> list = usersService.listAll();
+        if (list != null) {
+            map.put("status", "200");
+            map.put("message", "Data found");
+            map.put("data", list);
         } else {
             map.put("status", "404");
-            map.put("message", "Admin not found with email: " + email);
+            map.put("message", "Data not found");
         }
-
         return map;
     }
 
-    @PostMapping("/adminLogout")
+    @RequestMapping(value = "/dashboard-stats", method = RequestMethod.GET)
     @ResponseBody
-    public Map<String, Object> adminLogout(HttpSession session) {
-        Map<String, Object> map = mapFactory.createResponseMap();
-        session.invalidate();
-        map.put("status", "200");
-        map.put("message", "Logout successful");
+    public Map<String, Object> getDashboardStats() {
+        Map<String, Object> map = new HashMap<>();
+        map.put("totalProjects", projectDao.countAll());
+        map.put("totalTasks", taskDao.countAll());
+        map.put("totalUsers", usersService.countAll());
         return map;
-    }
-
-    @GetMapping("/denied")
-    public String accessDenied() {
-        return "404";
-    }
-
-    @GetMapping("/userLogin")
-    public String userLoginPage() {
-        // Redirect to unified login page
-        return "redirect:/loginPage";
     }
 }
-
-

@@ -1,105 +1,166 @@
--- MySQL dump 10.13  Distrib 8.0.22, for Win64 (x86_64)
---
--- Host: 127.0.0.1    Database: dbpro
--- ------------------------------------------------------
--- Server version	8.0.22
-
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!50503 SET NAMES utf8 */;
-/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
-/*!40103 SET TIME_ZONE='+00:00' */;
-/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
-/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
-/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
-/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+-- Clear existing data (in correct order to respect foreign key constraints)
+DELETE FROM project_team_members;
+DELETE FROM user_roles;
+DELETE FROM comment;
+DELETE FROM attachment;
+DELETE FROM task;
+DELETE FROM project;
+DELETE FROM users;
+DELETE FROM role;
 
 --
--- Dumping data for table `role` (moved first due to foreign key dependency)
+-- Dumping data for table `role`
+-- Note: Only system-level roles are stored here (ROLE_ADMIN, ROLE_USER)
+-- Project-specific roles (PROJECT_MANAGER, TEAM_MEMBER) are determined by:
+--   - projectManager field in Project table (user is PROJECT_MANAGER for that project)
+--   - teamMembers relationship in project_team_members table (user is TEAM_MEMBER for that project)
 --
-
-LOCK TABLES `role` WRITE;
-/*!40000 ALTER TABLE `role` DISABLE KEYS */;
-INSERT INTO `role` VALUES (1,'ROLE_ADMIN'),(2,'ROLE_USER'),(3,'ROLE_PROJECT_MANAGER'),(4,'ROLE_TEAM_MEMBER');
-/*!40000 ALTER TABLE `role` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Dumping data for table `admin`
---
-
-LOCK TABLES `admin` WRITE;
-/*!40000 ALTER TABLE `admin` DISABLE KEYS */;
-INSERT INTO `admin` VALUES (444,'Admin User','admin','$2a$10$t6YeKLlPnZNtgVEZP.uHO.FaFm/GdO.EaHqHnKpW4Wyf.TeZTNQ3G','3333333333','admin@gmail.com');
-/*!40000 ALTER TABLE `admin` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Dumping data for table `admin_roles`
---
-
-LOCK TABLES `admin_roles` WRITE;
-/*!40000 ALTER TABLE `admin_roles` DISABLE KEYS */;
-INSERT INTO `admin_roles` VALUES (444,1);
-/*!40000 ALTER TABLE `admin_roles` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Dumping data for table `hibernate_sequence`
---
-
-LOCK TABLES `hibernate_sequence` WRITE;
-/*!40000 ALTER TABLE `hibernate_sequence` DISABLE KEYS */;
-INSERT INTO `hibernate_sequence` VALUES (1),(1),(1),(1),(1),(2),(2),(2),(2),(2);
-/*!40000 ALTER TABLE `hibernate_sequence` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Dumping data for table `project`
---
-
-LOCK TABLES `project` WRITE;
-/*!40000 ALTER TABLE `project` DISABLE KEYS */;
-INSERT INTO `project` VALUES (37,'2021-02-28','csacsac','\0',_binary '','0000-00-00');
-/*!40000 ALTER TABLE `project` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Dumping data for table `task`
---
-
-LOCK TABLES `task` WRITE;
-/*!40000 ALTER TABLE `task` DISABLE KEYS */;
-INSERT INTO `task` VALUES (1,'2021-02-28',NULL,'sdvv',_binary '\0','2021-02-28',_binary '','0000-00-00'),(26,'2021-02-28',NULL,'jjhjhhjhjjh',_binary '\0','2021-02-28',_binary '','0000-00-00'),(35,'2021-02-28',NULL,'ZXxx',_binary '\0','2021-02-28',_binary '','0000-00-00'),(42,'2021-02-28',NULL,'csvsvsdvs',_binary '\0','2021-02-28',_binary '','0000-00-00');
-/*!40000 ALTER TABLE `task` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Dumping data for table `user_roles`
---
-
-LOCK TABLES `user_roles` WRITE;
-/*!40000 ALTER TABLE `user_roles` DISABLE KEYS */;
-/*!40000 ALTER TABLE `user_roles` ENABLE KEYS */;
-UNLOCK TABLES;
+INSERT INTO `role` (role_id, name) VALUES
+(1, 'ROLE_ADMIN'),   -- System administrator - full access
+(2, 'ROLE_USER');    -- Regular user - basic access
 
 --
 -- Dumping data for table `users`
+-- Passwords are 'password' (hashed with BCrypt)
+-- Note: Project-specific roles are assigned via projectManager and teamMembers relationships
 --
+INSERT INTO `users` (user_id, user_name, email, password) VALUES
+(1, 'Admin User', 'admin@tasknexus.com', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
+(2, 'Sarah Johnson', 'sarah.johnson@tasknexus.com', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
+(3, 'Michael Chen', 'michael.chen@tasknexus.com', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
+(4, 'Emily Rodriguez', 'emily.rodriguez@tasknexus.com', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
+(5, 'David Kim', 'david.kim@tasknexus.com', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
+(6, 'Jessica Martinez', 'jessica.martinez@tasknexus.com', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
+(7, 'PM1', 'pm1@tasknexus.com', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
+(8, 'TM1', 'tm1@tasknexus.com', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG'),
+(9, 'TM2', 'tm2@tasknexus.com', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG');
 
-LOCK TABLES `users` WRITE;
-/*!40000 ALTER TABLE `users` DISABLE KEYS */;
-/*!40000 ALTER TABLE `users` ENABLE KEYS */;
-UNLOCK TABLES;
-/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+--
+-- Dumping data for table `user_roles`
+-- Only system-level roles (ROLE_ADMIN, ROLE_USER) are assigned here
+-- Project-specific roles are determined by project assignments below
+--
+INSERT INTO `user_roles` (user_id, role_id) VALUES
+(1, 1), -- Admin User has ROLE_ADMIN (system-level)
+(2, 2), -- Sarah Johnson has ROLE_USER (system-level, but PROJECT_MANAGER for specific projects)
+(3, 2), -- Michael Chen has ROLE_USER (system-level, but TEAM_MEMBER for specific projects)
+(4, 2), -- Emily Rodriguez has ROLE_USER (system-level, but TEAM_MEMBER for specific projects)
+(5, 2), -- David Kim has ROLE_USER (system-level, but PROJECT_MANAGER for specific projects)
+(6, 2), -- Jessica Martinez has ROLE_USER (system-level, but TEAM_MEMBER for specific projects)
+(7, 2), -- PM1 has ROLE_USER (system-level, but PROJECT_MANAGER for specific projects) - Test user
+(8, 2), -- TM1 has ROLE_USER (system-level, but TEAM_MEMBER for specific projects) - Test user
+(9, 2); -- TM2 has ROLE_USER (system-level, but TEAM_MEMBER for specific projects) - Test user
 
-/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
-/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
-/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
-/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+--
+-- Dumping data for table `project`
+-- Note: created_at and updated_at are auto-generated by Hibernate @CreationTimestamp and @UpdateTimestamp
+-- project_manager_user_id determines who is PROJECT_MANAGER for this specific project
+--
+INSERT INTO `project` (project_id, name, description, project_status, project_manager_user_id, created_at, updated_at) VALUES
+(1, 'E-Commerce Platform Redesign', 'Complete redesign and modernization of the company e-commerce platform to improve user experience, mobile responsiveness, and checkout conversion rates. Includes new payment gateway integration and enhanced product search functionality.', 'IN_PROGRESS', 2, '2024-11-01', '2024-12-10'),
+(2, 'Mobile Banking App', 'Development of a new mobile banking application for iOS and Android platforms. Features include account management, bill payments, money transfers, and biometric authentication.', 'PLANNING', 5, '2024-12-01', '2024-12-01'),
+(3, 'Customer Support Portal', 'Build a comprehensive customer support portal with ticket management, live chat integration, knowledge base, and automated response system.', 'COMPLETED', 2, '2024-09-15', '2024-11-30'),
+(4, 'Data Analytics Dashboard', 'Create an interactive analytics dashboard for business intelligence, featuring real-time data visualization, custom reports, and export capabilities.', 'IN_PROGRESS', 7, '2024-10-10', '2024-12-08');
 
--- Dump completed on 2021-03-01 15:05:05
+--
+-- Dumping data for table `project_team_members`
+-- Many-to-many relationship between projects and users
+-- Users in this table have TEAM_MEMBER role for the specific project
+-- Note: A user can be PROJECT_MANAGER for one project and TEAM_MEMBER for another
+--
+INSERT INTO `project_team_members` (project_id, user_id) VALUES
+(1, 3), -- Michael Chen is TEAM_MEMBER for E-Commerce Platform Redesign
+(1, 4), -- Emily Rodriguez is TEAM_MEMBER for E-Commerce Platform Redesign
+(1, 6), -- Jessica Martinez is TEAM_MEMBER for E-Commerce Platform Redesign
+(1, 8), -- TM1 is TEAM_MEMBER for E-Commerce Platform Redesign (Test user)
+(1, 9), -- TM2 is TEAM_MEMBER for E-Commerce Platform Redesign (Test user)
+(2, 3), -- Michael Chen is TEAM_MEMBER for Mobile Banking App
+(2, 4), -- Emily Rodriguez is TEAM_MEMBER for Mobile Banking App
+(2, 8), -- TM1 is TEAM_MEMBER for Mobile Banking App (Test user)
+(3, 3), -- Michael Chen is TEAM_MEMBER for Customer Support Portal
+(3, 6), -- Jessica Martinez is TEAM_MEMBER for Customer Support Portal
+(3, 9), -- TM2 is TEAM_MEMBER for Customer Support Portal (Test user)
+(4, 4), -- Emily Rodriguez is TEAM_MEMBER for Data Analytics Dashboard
+(4, 6), -- Jessica Martinez is TEAM_MEMBER for Data Analytics Dashboard
+(4, 8); -- TM1 is TEAM_MEMBER for Data Analytics Dashboard (Test user)
+
+--
+-- Dumping data for table `task`
+-- Note: created_at and updated_at are auto-generated by Hibernate @CreationTimestamp and @UpdateTimestamp
+-- deadline is LocalDateTime format: 'YYYY-MM-DD HH:MM:SS'
+--
+INSERT INTO `task` (task_id, name, description, priority, task_status, project_id, assigned_to_user_id, created_by_user_id, deadline, created_at, updated_at) VALUES
+(1, 'Design new homepage layout', 'Create wireframes and high-fidelity mockups for the new e-commerce homepage. Focus on improving product discoverability and reducing bounce rate. Include responsive designs for mobile, tablet, and desktop.', 'HIGH', 'IN_PROGRESS', 1, 3, 2, '2024-12-20 17:00:00', '2024-11-05', '2024-12-09'),
+(2, 'Implement payment gateway integration', 'Integrate Stripe payment gateway API for secure checkout process. Include support for credit cards, debit cards, and digital wallets. Ensure PCI compliance and implement proper error handling.', 'HIGH', 'TODO', 1, 4, 2, '2024-12-25 17:00:00', '2024-11-10', '2024-11-10'),
+(3, 'Optimize product search functionality', 'Enhance the product search with filters, sorting options, and autocomplete suggestions. Implement Elasticsearch for better search performance and relevance ranking.', 'MEDIUM', 'IN_PROGRESS', 1, 6, 2, '2024-12-18 17:00:00', '2024-11-15', '2024-12-08'),
+(4, 'Setup project repository and CI/CD pipeline', 'Initialize the mobile banking app repository with proper folder structure, configure Git workflows, and set up continuous integration/deployment pipeline using Jenkins.', 'HIGH', 'COMPLETED', 2, 3, 5, '2024-12-05 17:00:00', '2024-12-02', '2024-12-04'),
+(5, 'Design user authentication flow', 'Create user flows and wireframes for login, registration, password reset, and biometric authentication features. Include security best practices and accessibility considerations.', 'HIGH', 'IN_PROGRESS', 2, 4, 5, '2024-12-15 17:00:00', '2024-12-03', '2024-12-09'),
+(6, 'Implement ticket management system', 'Build the core ticket management functionality with ticket creation, assignment, status tracking, and priority management. Include email notifications and ticket history.', 'HIGH', 'COMPLETED', 3, 3, 2, '2024-11-15 17:00:00', '2024-09-20', '2024-11-14'),
+(7, 'Integrate live chat widget', 'Integrate Intercom live chat widget into the support portal. Configure automated greetings, routing rules, and chat history storage.', 'MEDIUM', 'COMPLETED', 3, 6, 2, '2024-11-20 17:00:00', '2024-10-01', '2024-11-18'),
+(8, 'Build knowledge base search', 'Implement full-text search functionality for the knowledge base articles. Include category filtering, tag-based search, and related articles suggestions.', 'MEDIUM', 'COMPLETED', 3, 3, 2, '2024-11-25 17:00:00', '2024-10-10', '2024-11-22'),
+(9, 'Create data visualization components', 'Develop reusable chart components using D3.js and Chart.js for displaying analytics data. Include bar charts, line graphs, pie charts, and heat maps.', 'HIGH', 'IN_PROGRESS', 4, 4, 5, '2024-12-22 17:00:00', '2024-10-15', '2024-12-07'),
+(10, 'Implement real-time data updates', 'Set up WebSocket connections for real-time data streaming to the dashboard. Include connection management, error handling, and data refresh mechanisms.', 'HIGH', 'TODO', 4, 6, 5, '2024-12-28 17:00:00', '2024-10-20', '2024-10-20'),
+(11, 'Design responsive mobile checkout', 'Create mobile-optimized checkout flow with simplified form fields, progress indicators, and one-click payment options. Focus on reducing cart abandonment.', 'MEDIUM', 'BLOCKED', 1, 3, 2, '2024-12-30 17:00:00', '2024-11-20', '2024-12-05'),
+(12, 'Setup database schema for analytics', 'Design and implement database schema for storing analytics data. Include tables for events, metrics, dimensions, and time-series data with proper indexing.', 'HIGH', 'IN_PROGRESS', 4, 4, 5, '2024-12-20 17:00:00', '2024-10-25', '2024-12-06');
+
+--
+-- Dumping data for table `comment`
+-- Note: created_at is auto-generated by Hibernate @CreationTimestamp
+--
+INSERT INTO `comment` (comment_id, content, task_id, created_by_user_id, created_at) VALUES
+(1, 'The initial homepage design looks great! I suggest we add a hero section with featured products and improve the color contrast for better accessibility. Can we also consider adding a "New Arrivals" section?', 1, 2, '2024-11-08 10:30:00'),
+(2, 'I\'ve reviewed the wireframes and they look solid. One concern: the checkout button placement might cause accidental clicks on mobile. Should we add a confirmation step?', 1, 3, '2024-11-10 14:20:00'),
+(3, 'Stripe API documentation is comprehensive. I recommend we implement webhook handling for payment status updates. Also, we should add support for Apple Pay and Google Pay.', 2, 4, '2024-11-12 09:15:00'),
+(4, 'The search optimization is working well. Elasticsearch integration is complete and we\'re seeing 40% improvement in search response times. Next step: implement search analytics.', 3, 6, '2024-12-05 16:45:00'),
+(5, 'Repository setup is complete. CI/CD pipeline is configured and all initial tests are passing. Ready for development phase to begin.', 4, 3, '2024-12-04 11:00:00'),
+(6, 'Authentication flow designs are ready for review. I\'ve included biometric authentication options (Face ID, Touch ID, fingerprint) and multi-factor authentication support.', 5, 4, '2024-12-06 13:30:00'),
+(7, 'Ticket management system is fully functional. We\'ve processed over 1000 tickets in testing with no issues. Email notifications are working correctly.', 6, 2, '2024-11-14 15:20:00'),
+(8, 'Live chat integration is complete. The widget is responsive and works well on all devices. We\'ve configured automated responses for common questions.', 7, 6, '2024-11-18 10:45:00'),
+(9, 'Knowledge base search is performing excellently. Users can find relevant articles quickly. We\'ve added related articles suggestions which increased engagement by 25%.', 8, 3, '2024-11-22 14:10:00'),
+(10, 'Chart components are looking good. We\'ve created reusable components for all major chart types. Performance is optimized for large datasets.', 9, 4, '2024-12-03 11:30:00'),
+(11, 'Mobile checkout is blocked pending final approval on payment gateway selection. Once we confirm the provider, we can proceed with implementation.', 11, 2, '2024-12-05 09:00:00'),
+(12, 'Database schema is designed with scalability in mind. We\'ve implemented partitioning for time-series data and proper indexing for fast queries.', 12, 4, '2024-12-06 16:20:00');
+
+--
+-- Dumping data for table `attachment`
+-- Note: uploaded_at is auto-generated by Hibernate @CreationTimestamp
+-- file_size is in bytes
+--
+INSERT INTO `attachment` (attachment_id, file_name, file_path, file_size, task_id, uploaded_by_user_id, uploaded_at) VALUES
+(1, 'homepage_wireframes_v2.pdf', './uploads/homepage_wireframes_v2.pdf', 2457600, 1, 3, '2024-11-08 11:00:00'),
+(2, 'stripe_api_integration_guide.pdf', './uploads/stripe_api_integration_guide.pdf', 1536000, 2, 4, '2024-11-12 10:30:00'),
+(3, 'search_performance_report.xlsx', './uploads/search_performance_report.xlsx', 512000, 3, 6, '2024-12-05 17:00:00'),
+(4, 'ci_cd_pipeline_config.yml', './uploads/ci_cd_pipeline_config.yml', 15360, 4, 3, '2024-12-04 11:30:00'),
+(5, 'auth_flow_diagrams.png', './uploads/auth_flow_diagrams.png', 1024000, 5, 4, '2024-12-06 14:00:00'),
+(6, 'ticket_system_test_results.pdf', './uploads/ticket_system_test_results.pdf', 768000, 6, 2, '2024-11-14 15:45:00'),
+(7, 'intercom_setup_guide.pdf', './uploads/intercom_setup_guide.pdf', 614400, 7, 6, '2024-11-18 11:15:00'),
+(8, 'knowledge_base_analytics.xlsx', './uploads/knowledge_base_analytics.xlsx', 384000, 8, 3, '2024-11-22 14:30:00'),
+(9, 'chart_components_demo.mp4', './uploads/chart_components_demo.mp4', 5120000, 9, 4, '2024-12-03 12:00:00'),
+(10, 'database_schema_diagram.png', './uploads/database_schema_diagram.png', 2048000, 12, 4, '2024-12-06 16:45:00');
+
+-- Role Summary:
+-- User 1 (Admin): ROLE_ADMIN (system-level, all projects)
+-- User 2 (Sarah Johnson): ROLE_USER (system-level), PROJECT_MANAGER for projects 1, 3 (via project_manager_user_id)
+-- User 3 (Michael Chen): ROLE_USER (system-level), TEAM_MEMBER for projects 1, 2, 3 (via project_team_members)
+-- User 4 (Emily Rodriguez): ROLE_USER (system-level), TEAM_MEMBER for projects 1, 2, 4 (via project_team_members)
+-- User 5 (David Kim): ROLE_USER (system-level), PROJECT_MANAGER for projects 2, 4 (via project_manager_user_id)
+-- User 6 (Jessica Martinez): ROLE_USER (system-level), TEAM_MEMBER for projects 1, 3, 4 (via project_team_members)
+-- User 7 (PM1): ROLE_USER (system-level), PROJECT_MANAGER for project 4 (via project_manager_user_id) - Test user
+-- User 8 (TM1): ROLE_USER (system-level), TEAM_MEMBER for projects 1, 2, 4 (via project_team_members) - Test user
+-- User 9 (TM2): ROLE_USER (system-level), TEAM_MEMBER for projects 1, 3 (via project_team_members) - Test user
+
+-- Test User Login Credentials (password: 'password'):
+-- PM1: pm1@tasknexus.com / password
+-- TM1: tm1@tasknexus.com / password
+-- TM2: tm2@tasknexus.com / password
+
+-- ============================================
+-- Reset auto-increment counters AFTER all INSERTs
+-- This ensures the next auto-generated IDs start after the seed data
+-- ============================================
+ALTER TABLE `role` AUTO_INCREMENT = 3;
+ALTER TABLE `users` AUTO_INCREMENT = 10;
+ALTER TABLE `project` AUTO_INCREMENT = 5;
+ALTER TABLE `task` AUTO_INCREMENT = 13;
+ALTER TABLE `comment` AUTO_INCREMENT = 13;
+ALTER TABLE `attachment` AUTO_INCREMENT = 11;

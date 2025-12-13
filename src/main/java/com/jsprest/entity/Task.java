@@ -1,7 +1,10 @@
 package com.jsprest.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.jsprest.entity.enums.Priority;
 import com.jsprest.entity.enums.TaskStatus;
+import com.jsprest.serializer.EnumSerializer;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -20,6 +23,8 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.Column;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,10 +34,11 @@ public class Task {
 
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long taskId;
 
-
+    @NotBlank(message = "Task name is required")
+    @Size(min = 3, max = 200, message = "Task name must be between 3 and 200 characters")
     private String name;
 
 
@@ -43,15 +49,8 @@ public class Task {
     private LocalDate updatedAt;
 
 
-    private boolean status;
-
-
-    private boolean isExpired;
-
-    private String expiredTime;
-
-
     @Lob
+    @Size(max = 5000, message = "Description must not exceed 5000 characters")
     private String description;
 
     @ManyToOne
@@ -64,6 +63,7 @@ public class Task {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "priority")
+    @JsonSerialize(using = EnumSerializer.class)
     private Priority priority;
 
     @Column(name = "deadline")
@@ -71,12 +71,15 @@ public class Task {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "task_status")
+    @JsonSerialize(using = EnumSerializer.class)
     private TaskStatus taskStatus;
 
     @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<Comment> comments = new ArrayList<>();
 
     @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<Attachment> attachments = new ArrayList<>();
 
     @ManyToOne
@@ -113,30 +116,6 @@ public class Task {
 
     public void setUpdatedAt(LocalDate updatedAt) {
         this.updatedAt = updatedAt;
-    }
-
-    public boolean isStatus() {
-        return status;
-    }
-
-    public void setStatus(boolean status) {
-        this.status = status;
-    }
-
-    public boolean isExpired() {
-        return isExpired;
-    }
-
-    public void setExpired(boolean isExpired) {
-        this.isExpired = isExpired;
-    }
-
-    public String getExpiredTime() {
-        return expiredTime;
-    }
-
-    public void setExpiredTime(String expiredTime) {
-        this.expiredTime = expiredTime;
     }
 
     public String getDescription() {

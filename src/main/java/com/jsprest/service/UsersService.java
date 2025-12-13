@@ -9,5 +9,13 @@ public interface UsersService {
 
     List<Users> list();
 
+    List<Users> listAll();
+
+    List<Users> listNonAdmin();
+
     void delete(Users users);
+
+    Long countAll();
+
+    List<Users> findUsersInRelatedProjects(Integer userId);
 }

@@ -70,7 +70,7 @@
 - **Requirement**: Backend must be built using Spring Boot
 - **Status**: ✅ **SATISFIED**
 - **Evidence**: 
-  - Main class: `SpringBootRestWithJspApplication.java` with `@SpringBootApplication`
+  - Main class: `TaskNexusApplication.java` with `@SpringBootApplication`
   - `pom.xml` uses `spring-boot-starter-parent` version 3.2.0
 
 ---

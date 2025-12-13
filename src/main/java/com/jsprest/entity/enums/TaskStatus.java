@@ -4,6 +4,9 @@ public enum TaskStatus {
     TODO,
     IN_PROGRESS,
     COMPLETED,
-    BLOCKED
-}
+    BLOCKED;
 
+    public String getName() {
+        return this.name();
+    }
+}

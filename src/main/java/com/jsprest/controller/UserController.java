@@ -5,26 +5,37 @@ import com.jsprest.entity.Role;
 import com.jsprest.service.UsersService;
 import com.jsprest.dao.UserDao;
 import com.jsprest.dao.RoleDao;
+import com.jsprest.dao.ProjectDao;
+import com.jsprest.dao.TaskDao;
 import com.jsprest.factory.EntityFactory;
 import com.jsprest.factory.MapFactory;
+import com.jsprest.service.AuthzService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseBody;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.HashSet;
 import java.util.Arrays;
 
 @Controller
 public class UserController {
 
+    private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
     @Autowired
     UsersService userServices;
@@ -36,13 +47,36 @@ public class UserController {
     RoleDao roleDao;
 
     @Autowired
-    private BCryptPasswordEncoder passwordEncoder;
+    ProjectDao projectDao;
+
+    @Autowired
+    TaskDao taskDao;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private EntityFactory entityFactory;
 
     @Autowired
     private MapFactory mapFactory;
+
+    @Autowired
+    private AuthzService authzService;
+
+    @RequestMapping(value = "/login", method = RequestMethod.GET)
+    public String loginPage() {
+        return "login";
+    }
+
+    @RequestMapping(value = "/", method = RequestMethod.GET)
+    public String rootRedirect() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equalsIgnoreCase(String.valueOf(auth.getPrincipal()))) {
+            return "redirect:/page";
+        }
+        return "redirect:/login";
+    }
 
     @RequestMapping(value = "/page", method = RequestMethod.GET)
     public String getPage(org.springframework.ui.Model model) {
@@ -51,6 +85,7 @@ public class UserController {
 
 
     @RequestMapping(value = "/viewUser", method = RequestMethod.GET)
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public String getPage11() {
 
         return "user/home";
@@ -58,7 +93,8 @@ public class UserController {
 
 
     @RequestMapping(value = "/addUser", method = RequestMethod.GET)
-    public String addUser(@RequestParam(value = "userId", required = false) Integer userId, 
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public String addUser(@RequestParam(value = "userId", required = false) Integer userId,
                           org.springframework.ui.Model model) {
         if (userId != null) {
             Users user = userDao.findByIdWithRoles(userId);
@@ -70,15 +106,18 @@ public class UserController {
     }
 
 
-    @RequestMapping(value = "/saveOrUpdate", method = RequestMethod.POST)
+    // Removed GET endpoint for /saveOrUpdate - this was a debug endpoint that shouldn't be exposed
+    // Use POST or PATCH methods instead for saving/updating users
+
+    @RequestMapping(value = "/saveOrUpdate", method = {RequestMethod.POST, RequestMethod.PATCH})
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public @ResponseBody
     Map<String, Object> getSaved(@RequestBody Map<String, Object> userData) {
         Map<String, Object> map = mapFactory.createResponseMap();
 
         try {
             Users user = entityFactory.createUser();
-            
-            // Handle existing user update
+
             if (userData.containsKey("userId") && userData.get("userId") != null && !userData.get("userId").toString().isEmpty()) {
                 Integer userId = Integer.parseInt(userData.get("userId").toString());
                 Users existingUser = userDao.findByIdWithRoles(userId);
@@ -86,65 +125,135 @@ public class UserController {
                     user = existingUser;
                 }
             }
-            
-            // Set basic user fields
+
             if (userData.containsKey("name")) {
                 user.setUser_name(userData.get("name").toString());
             }
-            
+
             if (userData.containsKey("email")) {
-                user.setEmail(userData.get("email").toString());
+                String email = userData.get("email") != null ? userData.get("email").toString().trim() : "";
+                
+                if (email.isEmpty()) {
+                    map.put("status", "400");
+                    map.put("message", "Email is required");
+                    return map;
+                }
+                
+                if (email.length() > 100) {
+                    map.put("status", "400");
+                    map.put("message", "Email must not exceed 100 characters");
+                    return map;
+                }
+                
+                // Basic email format validation
+                if (!email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+                    map.put("status", "400");
+                    map.put("message", "Please enter a valid email address");
+                    return map;
+                }
+                
+                email = email.toLowerCase();
+                
+                if (user.getUser_id() == null || !email.equals(user.getEmail())) {
+                    Users existingUser = userDao.findByEmail(email);
+                    if (existingUser != null && !existingUser.getUser_id().equals(user.getUser_id())) {
+                        map.put("status", "409");
+                        map.put("message", "Email already exists. Please use a different email.");
+                        return map;
+                    }
+                }
+                
+                user.setEmail(email);
+            } else if (user.getUser_id() == null) {
+                // Email is required for new users
+                map.put("status", "400");
+                map.put("message", "Email is required");
+                return map;
             }
-            
-            // Password is not set by admin - user will register themselves
-            // Only update password if explicitly provided (for registration)
+
             if (userData.containsKey("password") && userData.get("password") != null && !userData.get("password").toString().isEmpty()) {
-                // This will be used for user registration
-                user.setPassword(userData.get("password").toString());
+                user.setPassword(passwordEncoder.encode(userData.get("password").toString()));
             }
-            
-            // Roles are NOT assigned at user creation - they are assigned at project level
-            // When a user is assigned as Project Manager or Team Member to a project,
-            // that defines their role for that specific project.
-            // No need to set roles here - keep existing roles if editing, or empty set for new users
+
             if (user.getUser_id() == null) {
-                // New user - no roles assigned (roles come from project assignments)
-                user.setRole(entityFactory.createEmptyRoleSet());
+                Role userRole = roleDao.findByName("ROLE_USER");
+                if (userRole != null) {
+                    Set<Role> roles = new HashSet<>();
+                    roles.add(userRole);
+                    user.setRole(roles);
+                } else {
+                    user.setRole(entityFactory.createEmptyRoleSet());
+                }
             }
-            // For existing users, keep their existing roles (if any) - don't overwrite
-            
-            // Save user with roles
+
             Users savedUser = userServices.saveOrUpdate(user);
-            
+
             map.put("status", "200");
             map.put("message", "User has been saved successfully");
             map.put("data", savedUser);
+        } catch (jakarta.validation.ConstraintViolationException e) {
+            logger.error("Validation error saving user", e);
+            // Extract user-friendly validation messages
+            StringBuilder errorMsg = new StringBuilder("Validation failed: ");
+            e.getConstraintViolations().forEach(violation -> {
+                if (errorMsg.length() > "Validation failed: ".length()) {
+                    errorMsg.append(", ");
+                }
+                errorMsg.append(violation.getMessage());
+            });
+            map.put("status", "400");
+            map.put("message", errorMsg.toString());
+        } catch (org.hibernate.exception.ConstraintViolationException e) {
+            logger.error("Database constraint error saving user", e);
+            if (e.getMessage() != null && e.getMessage().contains("email")) {
+                map.put("status", "409");
+                map.put("message", "Email already exists. Please use a different email.");
+            } else {
+                map.put("status", "400");
+                map.put("message", "Database constraint violation: " + e.getMessage());
+            }
         } catch (Exception e) {
-            map.put("status", "500");
-            map.put("message", "Error saving user: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error saving user", e);
+            // Check if it's a validation error in the message
+            String errorMessage = e.getMessage();
+            if (errorMessage != null && errorMessage.contains("ConstraintViolation")) {
+                // Try to extract validation messages
+                if (errorMessage.contains("Email should be valid")) {
+                    map.put("status", "400");
+                    map.put("message", "Please enter a valid email address");
+                } else if (errorMessage.contains("Email is required")) {
+                    map.put("status", "400");
+                    map.put("message", "Email is required");
+                } else {
+                    map.put("status", "400");
+                    map.put("message", "Validation failed. Please check your input.");
+                }
+            } else {
+                map.put("status", "500");
+                map.put("message", "Error saving user: " + errorMessage);
+            }
         }
 
         return map;
     }
 
-    @RequestMapping(value = "/allRoles", method = RequestMethod.POST)
+    @RequestMapping(value = "/allRoles", method = RequestMethod.GET)
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public @ResponseBody
     Map<String, Object> getAllRoles() {
         Map<String, Object> map = mapFactory.createResponseMap();
 
         try {
             List<Role> roles = roleDao.findAll();
-            
+
             if (roles == null || roles.isEmpty()) {
                 map.put("status", "404");
                 map.put("message", "No roles found in database. Please ensure roles are initialized.");
                 return map;
             }
-            
-            // Filter out ROLE_ADMIN and ROLE_USER (only show PROJECT_MANAGER and TEAM_MEMBER for assignment)
+
             List<Role> assignableRoles = roles.stream()
-                .filter(r -> r != null && r.getName() != null && 
+                .filter(r -> r != null && r.getName() != null &&
                     (r.getName().equals("ROLE_PROJECT_MANAGER") || r.getName().equals("ROLE_TEAM_MEMBER")))
                 .toList();
 
@@ -153,179 +262,298 @@ public class UserController {
                 map.put("message", "Data found");
                 map.put("data", assignableRoles);
             } else {
-                // Check if roles need to be created
                 boolean hasProjectManager = roles.stream().anyMatch(r -> r != null && "ROLE_PROJECT_MANAGER".equals(r.getName()));
                 boolean hasTeamMember = roles.stream().anyMatch(r -> r != null && "ROLE_TEAM_MEMBER".equals(r.getName()));
-                
-                // Roles not found - provide clear instructions
+
                 map.put("status", "404");
                 map.put("message", "Required roles not found. Please run SQL: INSERT INTO role (name) VALUES ('ROLE_PROJECT_MANAGER'), ('ROLE_TEAM_MEMBER');");
                 map.put("sqlCommand", "INSERT INTO role (name) VALUES ('ROLE_PROJECT_MANAGER'), ('ROLE_TEAM_MEMBER');");
             }
         } catch (Exception e) {
+            logger.error("Error loading roles", e);
             map.put("status", "500");
             map.put("message", "Error loading roles: " + e.getMessage());
-            e.printStackTrace();
         }
 
         return map;
     }
 
 
-    @RequestMapping(value = "/list", method = RequestMethod.POST)
+    /**
+     * Get list of users for project management.
+     * Admins can see all users, Project Managers can see all non-admin users for assigning to projects.
+     */
+    @RequestMapping(value = "/list", method = RequestMethod.GET)
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_USER')")
     public @ResponseBody
-    Map<String, Object> getAll(Users users) {
+    Map<String, Object> getAll(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "5") int size) {
         Map<String, Object> map = mapFactory.createResponseMap();
 
-        List<Users> list = userServices.list();
+        try {
+            // Get all users, then filter out admins
+            List<Users> allUsers = userDao.findAllPaginated(1, Integer.MAX_VALUE);
 
-        if (list != null) {
-            map.put("status", "200");
-            map.put("message", "Data found");
-            map.put("data", list);
-        } else {
-            map.put("status", "404");
-            map.put("message", "Data not found");
-
-        }
-
-        System.out.println(map);
-        return map;
-    }
-
-
-    @RequestMapping(value = "/deleteUser", method = RequestMethod.POST)
-    public @ResponseBody
-    Map<String, Object> delete(Users users) {
-        Map<String, Object> map = mapFactory.createResponseMap();
-
-        userServices.delete(users);
-        map.put("status", "200");
-        map.put("message", "Your record have been deleted successfully");
-
-        System.out.println(map);
-        return map;
-    }
-
-    @RequestMapping(value = "/userLogin", method = RequestMethod.POST)
-    public @ResponseBody
-    Map<String, Object> userLogin(@RequestParam String email, @RequestParam String password, HttpSession session) {
-        Map<String, Object> map = mapFactory.createResponseMap();
-
-        Users user = userDao.findByEmail(email);
-        if (user != null) {
-            // Check if user has registered (has password)
-            if (user.getPassword() == null || user.getPassword().isEmpty()) {
-                map.put("status", "403");
-                map.put("message", "Please register first. Your email has been added by admin, but you need to set your password.");
-                return map;
-            }
-            
-            // Verify password using BCrypt
-            boolean passwordMatches = false;
-            if (user.getPassword().startsWith("$2a$") || user.getPassword().startsWith("$2b$") || user.getPassword().startsWith("$2y$")) {
-                passwordMatches = passwordEncoder.matches(password, user.getPassword());
-            } else {
-                // Plain text password (fallback for development)
-                passwordMatches = user.getPassword().equals(password);
-            }
-            
-            if (!passwordMatches) {
-                map.put("status", "401");
-                map.put("message", "Invalid password");
-                return map;
-            }
-            
-            // Load user with roles
-            Users userWithRoles = userDao.findByIdWithRoles(user.getUser_id());
-            if (userWithRoles != null) {
-                session.setAttribute("userId", userWithRoles.getUser_id());
-                session.setAttribute("userName", userWithRoles.getUser_name());
-                session.setAttribute("userEmail", userWithRoles.getEmail());
-                session.setAttribute("userRoles", userWithRoles.getRole());
+            if (allUsers != null) {
+                // Filter out admin users (matching frontend logic)
+                List<Users> nonAdminUsers = allUsers.stream()
+                    .filter(user -> {
+                        if (user.getRole() == null || user.getRole().isEmpty()) {
+                            return true;
+                        }
+                        return user.getRole().stream()
+                            .noneMatch(role -> role != null && "ROLE_ADMIN".equals(role.getName()));
+                    })
+                    .toList();
                 
+                // Calculate total pages based on non-admin user count
+                int totalFiltered = nonAdminUsers.size();
+                long totalPages = totalFiltered > 0 ? (long) Math.ceil((double) totalFiltered / size) : 0;
+                
+                // Paginate the filtered list
+                int startIndex = (page - 1) * size;
+                int endIndex = Math.min(startIndex + size, totalFiltered);
+                List<Users> paginatedFiltered = startIndex < totalFiltered 
+                    ? nonAdminUsers.subList(startIndex, endIndex)
+                    : List.of();
+
                 map.put("status", "200");
-                map.put("message", "Login successful");
-                map.put("data", userWithRoles);
+                map.put("message", "Data found");
+                map.put("data", paginatedFiltered);
+                map.put("totalPages", totalPages);
+                map.put("currentPage", page);
             } else {
                 map.put("status", "404");
-                map.put("message", "User not found");
+                map.put("message", "Data not found");
             }
-        } else {
-            map.put("status", "404");
-            map.put("message", "User not found with email: " + email + ". Please contact admin to add your email first.");
+        } catch (Exception e) {
+            logger.error("Error retrieving users", e);
+            map.put("status", "500");
+            map.put("message", "Error retrieving users: " + e.getMessage());
         }
 
         return map;
     }
-    
+
+    @RequestMapping(value = "/userList", method = RequestMethod.GET)
+    @PreAuthorize("isAuthenticated()")
+    public @ResponseBody Map<String, Object> getUserList() {
+        Map<String, Object> map = mapFactory.createResponseMap();
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            Users user = userDao.findByEmail(auth.getName());
+            if (user == null) {
+                map.put("status", "404");
+                map.put("message", "User not found");
+                return map;
+            }
+            boolean isAdmin = user.getRole() != null && user.getRole().stream()
+                .anyMatch(r -> r != null && r.getName() != null && r.getName().equals("ROLE_ADMIN"));
+            
+            List<Users> list;
+            if (isAdmin) {
+                list = userServices.listAll();
+            } else {
+                list = userServices.findUsersInRelatedProjects(user.getUser_id());
+            }
+
+            if (list != null) {
+                map.put("status", "200");
+                map.put("message", "Data found");
+                map.put("data", list);
+            } else {
+                map.put("status", "404");
+                map.put("message", "Data not found");
+            }
+        } catch (Exception e) {
+            logger.error("Error retrieving user list", e);
+            map.put("status", "500");
+            map.put("message", "Error retrieving user list: " + e.getMessage());
+        }
+        return map;
+    }
+
+
+    @RequestMapping(value = "/deleteUser", method = RequestMethod.DELETE)
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public @ResponseBody
+    Map<String, Object> delete(@RequestParam Integer userId) {
+        Map<String, Object> map = mapFactory.createResponseMap();
+
+        try {
+            Users user = userDao.findByIdWithRoles(userId);
+            if (user == null) {
+                map.put("status", "404");
+                map.put("message", "User not found");
+                return map;
+            }
+            
+            if (user.getRole() != null && !user.getRole().isEmpty()) {
+                boolean isAdmin = user.getRole().stream()
+                    .anyMatch(role -> role != null && "ROLE_ADMIN".equals(role.getName()));
+                if (isAdmin) {
+                    map.put("status", "403");
+                    map.put("message", "Cannot delete admin users");
+                    return map;
+                }
+            }
+            
+            userServices.delete(user);
+            map.put("status", "200");
+            map.put("message", "Your record have been deleted successfully");
+        } catch (Exception e) {
+            logger.error("Error deleting user with id: {}", userId, e);
+            map.put("status", "500");
+            map.put("message", "Error deleting user: " + e.getMessage());
+        }
+
+        return map;
+    }
+
     @RequestMapping(value = "/register", method = RequestMethod.GET)
     public String registerPage() {
         return "user/register";
     }
-    
+
     @RequestMapping(value = "/register", method = RequestMethod.POST)
     public @ResponseBody
     Map<String, Object> register(@RequestParam String email, @RequestParam String password, @RequestParam String confirmPassword) {
         Map<String, Object> map = mapFactory.createResponseMap();
 
-        // Validate passwords match
+        // Validate email
+        if (email == null || email.trim().isEmpty()) {
+            map.put("status", "400");
+            map.put("message", "Email is required");
+            return map;
+        }
+        
+        email = email.trim().toLowerCase();
+        
+        if (email.length() > 100) {
+            map.put("status", "400");
+            map.put("message", "Email must not exceed 100 characters");
+            return map;
+        }
+        
+        // Basic email format validation
+        if (!email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+            map.put("status", "400");
+            map.put("message", "Please enter a valid email address");
+            return map;
+        }
+
+        // Validate password
+        if (password == null || password.isEmpty()) {
+            map.put("status", "400");
+            map.put("message", "Password is required");
+            return map;
+        }
+        
+        if (password.length() < 6) {
+            map.put("status", "400");
+            map.put("message", "Password must be at least 6 characters long");
+            return map;
+        }
+        
+        // Reasonable password max length
+        if (password.length() > 100) {
+            map.put("status", "400");
+            map.put("message", "Password must not exceed 100 characters");
+            return map;
+        }
+
         if (!password.equals(confirmPassword)) {
             map.put("status", "400");
             map.put("message", "Passwords do not match");
             return map;
         }
-        
-        // Check if email exists in system (must be added by admin first)
+
         Users user = userDao.findByEmail(email);
         if (user == null) {
             map.put("status", "404");
             map.put("message", "Email not found in system. Please contact admin to add your email first.");
             return map;
         }
-        
-        // Check if user already registered
+
         if (user.getPassword() != null && !user.getPassword().isEmpty()) {
             map.put("status", "409");
             map.put("message", "User already registered. Please login instead.");
             return map;
         }
-        
-        // Hash password and save
+
+        if (user.getRole() == null || user.getRole().isEmpty()) {
+            Role userRole = roleDao.findByName("ROLE_USER");
+            if (userRole != null) {
+                Set<Role> roles = new HashSet<>();
+                roles.add(userRole);
+                user.setRole(roles);
+            }
+        }
+
         String hashedPassword = passwordEncoder.encode(password);
         user.setPassword(hashedPassword);
-        
+
         try {
             userDao.save(user);
             map.put("status", "200");
             map.put("message", "Registration successful! You can now login.");
+        } catch (jakarta.validation.ConstraintViolationException e) {
+            logger.error("Validation error registering user", e);
+            // Extract user-friendly validation messages
+            StringBuilder errorMsg = new StringBuilder("Validation failed: ");
+            e.getConstraintViolations().forEach(violation -> {
+                if (errorMsg.length() > "Validation failed: ".length()) {
+                    errorMsg.append(", ");
+                }
+                errorMsg.append(violation.getMessage());
+            });
+            map.put("status", "400");
+            map.put("message", errorMsg.toString());
+        } catch (org.hibernate.exception.ConstraintViolationException e) {
+            logger.error("Database constraint error registering user", e);
+            if (e.getMessage() != null && e.getMessage().contains("email")) {
+                map.put("status", "409");
+                map.put("message", "Email already exists. Please login instead.");
+            } else {
+                map.put("status", "400");
+                map.put("message", "Database constraint violation: " + e.getMessage());
+            }
         } catch (Exception e) {
-            map.put("status", "500");
-            map.put("message", "Error during registration: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error during registration for email: {}", email, e);
+            // Check if it's a validation error in the message
+            String errorMessage = e.getMessage();
+            if (errorMessage != null && errorMessage.contains("ConstraintViolation")) {
+                // Try to extract validation messages
+                if (errorMessage.contains("Email should be valid")) {
+                    map.put("status", "400");
+                    map.put("message", "Please enter a valid email address");
+                } else if (errorMessage.contains("Email is required")) {
+                    map.put("status", "400");
+                    map.put("message", "Email is required");
+                } else {
+                    map.put("status", "400");
+                    map.put("message", "Validation failed. Please check your input.");
+                }
+            } else {
+                map.put("status", "500");
+                map.put("message", "Error during registration: " + errorMessage);
+            }
         }
 
         return map;
     }
 
-    @RequestMapping(value = "/userLogout", method = RequestMethod.POST)
+    @RequestMapping(value = "/currentUser", method = RequestMethod.GET)
+    @PreAuthorize("isAuthenticated()")
     public @ResponseBody
-    Map<String, Object> userLogout(HttpSession session) {
+    Map<String, Object> getCurrentUser() {
         Map<String, Object> map = mapFactory.createResponseMap();
-        session.invalidate();
-        map.put("status", "200");
-        map.put("message", "Logout successful");
-        return map;
-    }
-
-    @RequestMapping(value = "/currentUser", method = RequestMethod.POST)
-    public @ResponseBody
-    Map<String, Object> getCurrentUser(HttpSession session) {
-        Map<String, Object> map = mapFactory.createResponseMap();
-        Integer userId = (Integer) session.getAttribute("userId");
-        if (userId != null) {
-            Users user = userDao.findByIdWithRoles(userId);
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated()) {
+            Users user = userDao.findByEmailWithPassword(auth.getName());
             if (user != null) {
+                if (user.getRole() != null) {
+                    user.getRole().size(); // initialize roles for serialization
+                }
                 map.put("status", "200");
                 map.put("message", "User found");
                 map.put("data", user);
@@ -337,6 +565,75 @@ public class UserController {
             map.put("status", "401");
             map.put("message", "User not logged in");
         }
+        return map;
+    }
+
+    @RequestMapping(value = "/dashboard/stats", method = RequestMethod.GET)
+    @PreAuthorize("isAuthenticated()")
+    @ResponseBody
+    public Map<String, Object> getDashboardStats() {
+        Map<String, Object> stats = new HashMap<>();
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            stats.put("status", "401");
+            stats.put("message", "User not authenticated");
+            return stats;
+        }
+        Users user = userDao.findByEmail(auth.getName());
+        
+        if (user == null) {
+            stats.put("status", "401");
+            stats.put("message", "User not found");
+            return stats;
+        }
+        
+        Integer userId = user.getUser_id();
+        boolean isAdmin = user.getRole() != null && user.getRole().stream()
+            .anyMatch(r -> r != null && "ROLE_ADMIN".equals(r.getName()));
+
+        if (isAdmin) {
+            stats.put("totalProjects", projectDao.countAll());
+            stats.put("totalTasks", taskDao.countAll());
+            stats.put("totalUsers", userServices.countAll());
+            stats.put("activeTasks", taskDao.countAllActiveTasks());
+            stats.put("myTasks", 0L);
+        } else {
+            stats.put("totalProjects", projectDao.countProjectsForUser(userId));
+            stats.put("totalTasks", taskDao.countTasksForUser(userId));
+            stats.put("activeTasks", taskDao.countActiveTasksForUser(userId));
+            stats.put("myTasks", taskDao.countTasksByAssignee(userId));
+        }
+        return stats;
+    }
+
+    @RequestMapping(value = "/debug/currentUser", method = RequestMethod.GET)
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public @ResponseBody
+    Map<String, Object> debugCurrentUser() {
+        Map<String, Object> map = mapFactory.createResponseMap();
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            map.put("status", "401");
+            map.put("message", "User not logged in");
+            return map;
+        }
+
+        Map<String, Object> debug = new java.util.HashMap<>();
+        debug.put("principal", auth.getPrincipal());
+        debug.put("name", auth.getName());
+        debug.put("authorities", auth.getAuthorities());
+
+        Users user = userDao.findByEmailWithPassword(auth.getName());
+        if (user != null) {
+            if (user.getRole() != null) {
+                user.getRole().size(); // force load roles
+            }
+            debug.put("userEntity", user);
+        }
+
+        map.put("status", "200");
+        map.put("message", "Debug current user");
+        map.put("data", debug);
         return map;
     }
 }

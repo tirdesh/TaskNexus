@@ -6,10 +6,11 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 
 @SpringBootApplication
 @EnableConfigurationProperties
-public class SpringBootRestWithJspApplication {
+public class TaskNexusApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(SpringBootRestWithJspApplication.class, args);
+        SpringApplication.run(TaskNexusApplication.class, args);
     }
 
 }
+

@@ -30,7 +30,7 @@ public class AttachmentDao {
 
     public List<Attachment> findByTaskId(Long taskId) {
         TypedQuery<Attachment> query = entityManager.createQuery(
-            "SELECT a FROM Attachment a WHERE a.task.taskId = :taskId ORDER BY a.uploadedAt DESC", Attachment.class);
+            "SELECT DISTINCT a FROM Attachment a LEFT JOIN FETCH a.uploadedBy WHERE a.task.taskId = :taskId ORDER BY a.uploadedAt DESC", Attachment.class);
         query.setParameter("taskId", taskId);
         return query.getResultList();
     }

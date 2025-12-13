@@ -3,6 +3,9 @@ package com.jsprest.entity.enums;
 public enum Priority {
     HIGH,
     MEDIUM,
-    LOW
-}
+    LOW;
 
+    public String getName() {
+        return this.name();
+    }
+}

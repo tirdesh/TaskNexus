@@ -1,6 +1,9 @@
 package com.jsprest.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.jsprest.entity.enums.ProjectStatus;
+import com.jsprest.serializer.EnumSerializer;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -21,6 +24,8 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.CascadeType;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -30,13 +35,15 @@ public class Project {
 
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long projectId;
 
-
+    @NotBlank(message = "Project name is required")
+    @Size(min = 3, max = 100, message = "Project name must be between 3 and 100 characters")
     private String name;
 
     @Lob
+    @Size(max = 5000, message = "Description must not exceed 5000 characters")
     private String description;
 
     @CreationTimestamp
@@ -44,9 +51,6 @@ public class Project {
 
     @UpdateTimestamp
     private LocalDate updatedAt;
-
-
-    private boolean status;
 
     @ManyToOne
     @JoinColumn(name = "project_manager_user_id")
@@ -56,13 +60,16 @@ public class Project {
     @JoinTable(name = "project_team_members",
             joinColumns = @JoinColumn(name = "project_id"),
             inverseJoinColumns = @JoinColumn(name = "user_id"))
+    @JsonIgnore
     private Set<Users> teamMembers = new HashSet<>();
 
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<Task> tasks = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
     @Column(name = "project_status")
+    @JsonSerialize(using = EnumSerializer.class)
     private ProjectStatus projectStatus;
 
     public Long getProjectId() {
@@ -103,17 +110,6 @@ public class Project {
     public void setUpdatedAt(LocalDate updatedAt) {
         this.updatedAt = updatedAt;
     }
-
-
-    public boolean isStatus() {
-        return status;
-    }
-
-
-    public void setStatus(boolean status) {
-        this.status = status;
-    }
-
 
     public String getDescription() {
         return description;

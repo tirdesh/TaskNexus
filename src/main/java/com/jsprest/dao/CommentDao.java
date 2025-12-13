@@ -30,7 +30,7 @@ public class CommentDao {
 
     public List<Comment> findByTaskId(Long taskId) {
         TypedQuery<Comment> query = entityManager.createQuery(
-            "SELECT c FROM Comment c WHERE c.task.taskId = :taskId ORDER BY c.createdAt DESC", Comment.class);
+            "SELECT DISTINCT c FROM Comment c LEFT JOIN FETCH c.createdBy WHERE c.task.taskId = :taskId ORDER BY c.createdAt DESC", Comment.class);
         query.setParameter("taskId", taskId);
         return query.getResultList();
     }

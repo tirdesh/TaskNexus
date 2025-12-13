@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 public class Attachment {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long attachmentId;
 
     @Column(name = "file_name")

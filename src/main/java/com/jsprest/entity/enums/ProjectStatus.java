@@ -4,6 +4,9 @@ public enum ProjectStatus {
     PLANNING,
     IN_PROGRESS,
     COMPLETED,
-    ON_HOLD
-}
+    ON_HOLD;
 
+    public String getName() {
+        return this.name();
+    }
+}

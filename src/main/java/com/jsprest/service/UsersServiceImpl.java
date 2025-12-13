@@ -18,8 +18,15 @@ public class UsersServiceImpl implements UsersService {
     }
 
     public List<Users> list() {
-// TODO Auto-generated method stub
+        return userDao.findAllNonAdmin();
+    }
+
+    public List<Users> listAll() {
         return userDao.findAll();
+    }
+
+    public List<Users> listNonAdmin() {
+        return userDao.findAllNonAdmin();
     }
 
     public void delete(Users users) {
@@ -27,4 +34,13 @@ public class UsersServiceImpl implements UsersService {
         userDao.delete(users);
     }
 
+    @Override
+    public Long countAll() {
+        return userDao.countAll();
+    }
+
+    @Override
+    public List<Users> findUsersInRelatedProjects(Integer userId) {
+        return userDao.findUsersInRelatedProjects(userId);
+    }
 }
