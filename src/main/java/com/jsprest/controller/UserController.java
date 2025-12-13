@@ -70,16 +70,6 @@ public class UserController {
     }
 
 
-    @RequestMapping(value = "/saveOrUpdate", method = RequestMethod.GET)
-    public String getAllUsers(Users users) {
-
-
-        List<Users> list = userServices.list();
-
-
-        return list.toString();
-    }
-
     @RequestMapping(value = "/saveOrUpdate", method = RequestMethod.POST)
     public @ResponseBody
     Map<String, Object> getSaved(@RequestBody Map<String, Object> userData) {
