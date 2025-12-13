@@ -68,39 +68,23 @@ TaskNexus is a full-stack web application designed to help teams manage projects
 
 ## Installation & Setup
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/tirdesh/TaskNexus.git
-   cd TaskNexus
-   ```
+For detailed setup and installation instructions, see [SETUP.md](SETUP.md).
 
-2. **Configure Database**
-   - Create a MySQL database named `dbpro`
-   - Update database credentials in `src/main/resources/application.properties`:
-     ```properties
-     spring.datasource.url=jdbc:mysql://localhost:3306/dbpro?useSSL=false&createDatabaseIfNotExist=true
-     spring.datasource.username=your_username
-     spring.datasource.password=your_password
-     ```
+**Quick Start:**
+```bash
+# Clone repository
+git clone https://github.com/tirdesh/TaskNexus.git
+cd TaskNexus
 
-3. **Build the project**
-   ```bash
-   ./mvnw clean install
-   ```
+# Update database credentials in src/main/resources/application.properties
 
-4. **Run the application**
-   ```bash
-   ./mvnw spring-boot:run
-   ```
-   
-   Or using Maven wrapper on Windows:
-   ```bash
-   mvnw.cmd spring-boot:run
-   ```
+# Build and run
+./mvnw clean install
+./mvnw spring-boot:run
 
-5. **Access the application**
-   - Open your browser and navigate to: `http://localhost:8080`
-   - Default port: 8080 (configurable in `application.properties`)
+# Access at http://localhost:8080
+# Login: admin@tasknexus.com / password
+```
 
 ## Project Structure
 
@@ -109,23 +93,32 @@ TaskNexus/
 ├── src/
 │   ├── main/
 │   │   ├── java/com/jsprest/
-│   │   │   ├── config/          # Configuration classes
-│   │   │   ├── controller/      # REST/Web controllers
-│   │   │   ├── dao/             # Data Access Objects (Hibernate)
-│   │   │   ├── entity/          # JPA entities
-│   │   │   │   └── enums/       # Enum types
-│   │   │   ├── exception/        # Exception handlers
-│   │   │   ├── factory/          # Factory classes
-│   │   │   └── service/          # Business logic layer
+│   │   │   ├── config/              # Configuration classes
+│   │   │   ├── controller/          # REST/Web controllers
+│   │   │   ├── dao/                 # Data Access Objects (Hibernate)
+│   │   │   ├── entity/              # JPA entities
+│   │   │   │   └── enums/           # Enum types
+│   │   │   ├── exception/           # Exception handlers
+│   │   │   ├── factory/             # Factory classes
+│   │   │   ├── serializer/          # Custom serializers
+│   │   │   ├── service/             # Business logic layer
+│   │   │   ├── TaskNexusApplication.java  # Main application class
+│   │   │   └── ServletInitializer.java    # WAR deployment initializer
 │   │   ├── resources/
-│   │   │   ├── application.properties  # Application configuration
-│   │   │   ├── data.sql         # Initial data script
-│   │   │   └── static/          # Static resources (CSS, JS, images)
+│   │   │   ├── application.properties     # Application configuration
+│   │   │   ├── data.sql                   # Initial data script
+│   │   │   └── static/                    # Static resources (CSS, JS, images)
 │   │   └── webapp/
-│   │       └── WEB-INF/views/   # JSP view files
-│   └── test/                    # Test files
-├── pom.xml                      # Maven configuration
-└── README.md                    # This file
+│   │       └── WEB-INF/views/             # JSP view files
+│   └── test/
+│       └── java/com/jsprest/
+│           └── TaskNexusApplicationTests.java  # Application tests
+├── pom.xml                          # Maven configuration
+├── mvnw / mvnw.cmd                  # Maven wrapper scripts
+├── LICENSE                           # License file
+├── README.md                         # This file
+├── REQUIREMENTS_COMPLIANCE_REPORT.md # Compliance documentation
+└── CHANGES_SUMMARY.md                # Changes documentation
 ```
 
 ## Database Schema
@@ -170,7 +163,7 @@ The application includes Spring Boot DevTools for hot reloading during developme
 ./mvnw clean package
 ```
 
-This creates a WAR file in the `target/` directory that can be deployed to a servlet container.
+This creates a WAR file (`TaskNexus-0.0.1-SNAPSHOT.war`) in the `target/` directory that can be deployed to a servlet container like Tomcat, Jetty, or WebLogic.
 
 ## Requirements Compliance
 
