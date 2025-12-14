@@ -71,20 +71,20 @@ TaskNexus is a full-stack web application designed to help teams manage projects
 For detailed setup and installation instructions, see [SETUP.md](SETUP.md).
 
 **Quick Start:**
-```bash
+   ```bash
 # Clone repository
-git clone https://github.com/tirdesh/TaskNexus.git
-cd TaskNexus
+   git clone https://github.com/tirdesh/TaskNexus.git
+   cd TaskNexus
 
 # Update database credentials in src/main/resources/application.properties
 
 # Build and run
-./mvnw clean install
-./mvnw spring-boot:run
-
+   ./mvnw clean install
+   ./mvnw spring-boot:run
+   
 # Access at http://localhost:8080
 # Login: admin@tasknexus.com / password
-```
+   ```
 
 ## Project Structure
 
